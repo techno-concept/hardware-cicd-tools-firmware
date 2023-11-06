@@ -1,0 +1,60 @@
+name: CI for Hardware Dock Firmware
+
+on:
+  workflow_call:
+
+jobs:
+  ci:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+            fetch-depth: 0
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git wget flex bison gperf python3 python3-pip python3-setuptools cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
+
+      - name: Export ESP-IDF path
+        run: |
+          echo "IDF_PATH=$HOME/esp/esp-idf" >> $GITHUB_ENV
+          echo "$HOME/.espressif/tools/xtensa-esp32-elf/esp-2020r3-8.4.0/xtensa-esp32-elf/bin" >> $GITHUB_PATH
+
+      - name: Install ESP-IDF
+        run: |
+          git clone --recursive https://github.com/espressif/esp-idf.git $IDF_PATH
+          cd $IDF_PATH
+          git checkout v5.1.1
+          git submodule update --init --recursive
+          ./install.sh esp32
+
+      - name: Build project
+        run: |
+          . $HOME/esp/esp-idf/export.sh
+          idf.py build
+
+      - name: Upload bootloader.bin
+        uses: actions/upload-artifact@v2
+        with:
+          name: bootloader.bin
+          path: build/bootloader/bootloader.bin
+
+      - name: Upload partition-table.bin
+        uses: actions/upload-artifact@v2
+        with:
+          name: partition-table.bin
+          path: build/partition_table/partition-table.bin
+
+      - name: Upload hardware-dock-firmware-tc.elf
+        uses: actions/upload-artifact@v2
+        with:
+          name: hardware-dock-firmware-tc.elf
+          path: build/hardware-dock-firmware-tc.elf
+
+      - name: Upload hardware-dock-firmware-tc.bin
+        uses: actions/upload-artifact@v2
+        with:
+          name: hardware-dock-firmware-tc.bin
+          path: build/hardware-dock-firmware-tc.bin
