@@ -1,0 +1,25 @@
+name: "Release"
+
+on:
+  push:
+    tags:
+      - "**"
+
+jobs:
+  release:
+    name: "Release"
+
+    runs-on: "ubuntu-latest"
+
+    timeout-minutes: 5
+
+    steps:
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: "Create release"
+        uses: "techno-concept/hardware-cicd-tools-firmware/actions/github/release/create@1.0.0"
+        with:
+          github-token: "${{ secrets.NVP_GITHUB_TOKEN }}"
