@@ -5,7 +5,7 @@ on:
 
 jobs:
   ci:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -24,10 +24,7 @@ jobs:
 
       - name: Install ESP-IDF
         run: |
-          git clone --recursive https://github.com/espressif/esp-idf.git $IDF_PATH
-          cd $IDF_PATH
-          git checkout v5.1.1
-          git submodule update --init --recursive
+          git clone -b v5.1.2 --recursive https://github.com/espressif/esp-idf.git $IDF_PATH
           ./install.sh esp32
 
       - name: Build project
