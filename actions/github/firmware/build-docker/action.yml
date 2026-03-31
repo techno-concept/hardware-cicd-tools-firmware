@@ -1,0 +1,84 @@
+name: "Docker Firmware Build"
+description: "Builds a firmware project using a standardized Docker container equipped with ARM GCC, CMake, and specific NVP-EOS environment variables."
+
+inputs:
+  project-path:
+    description: "Path to the firmware project to build (containing build.sh or CMakeLists.txt)"
+    required: true
+    default: "."
+  docker-image:
+    description: "Name of the Docker image to build or use"
+    required: false
+    default: "techno-concept-firmware-builder:latest"
+  build-script:
+    description: "Build script to execute in the container"
+    required: false
+    default: "./build.sh"
+  build-args:
+    description: "Arguments to pass to the build script"
+    required: false
+    default: "--build-type release"
+  github-token:
+    description: "GitHub token (éphémère via GitHub App) pour cloner les dépôts privés via FetchContent"
+    required: true
+  aws-kms-key-id:
+    description: "ARN ou alias de la clé AWS KMS utilisée pour signer le firmware (optionnel)"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Set up Docker Buildx"
+      uses: docker/setup-buildx-action@v3
+
+    - name: "Build Docker Image"
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ github.action_path }}
+        file: ${{ github.action_path }}/Dockerfile
+        tags: ${{ inputs.docker-image }}
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: "Run Build in Docker"
+      shell: bash
+      env:
+        INPUT_PROJECT_PATH: ${{ inputs.project-path }}
+        INPUT_BUILD_SCRIPT: ${{ inputs.build-script }}
+        INPUT_BUILD_ARGS: ${{ inputs.build-args }}
+        INPUT_DOCKER_IMAGE: ${{ inputs.docker-image }}
+        GIT_CLONE_TOKEN: ${{ inputs.github-token }}
+        AWS_KMS_KEY_ID: ${{ inputs.aws-kms-key-id }}
+      run: |
+        # Set up project volume mount
+        VOLUMES=(-v "$GITHUB_WORKSPACE/${{ inputs.project-path }}:/workspace/firmware")
+        ENV_VARS=()
+
+        # Pass generic AWS environment variables into docker if they exist
+        for var in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_KMS_KEY_ID AWS_REGION AWS_DEFAULT_REGION; do
+          val="${!var}"
+          if [ -n "$val" ]; then
+            ENV_VARS+=(-e "$var")
+          fi
+        done
+
+        ENVFILE=$(mktemp)
+        chmod 600 "$ENVFILE"
+        trap 'rm -f "$ENVFILE"' EXIT INT TERM
+        printf 'GIT_CONFIG_COUNT=1\n' >> "$ENVFILE"
+        printf 'GIT_CONFIG_KEY_0=url.https://x-access-token:%s@github.com/.insteadOf\n' "$GIT_CLONE_TOKEN" >> "$ENVFILE"
+        printf 'GIT_CONFIG_VALUE_0=https://github.com/\n' >> "$ENVFILE"
+
+        docker run --rm \
+          "${VOLUMES[@]}" \
+          "${ENV_VARS[@]}" \
+          --env-file "$ENVFILE" \
+          -w /workspace/firmware \
+          --user "$(id -u):$(id -g)" \
+          "$INPUT_DOCKER_IMAGE" \
+          bash -c "
+            export HOME=/tmp;
+            git config --global --add safe.directory '*' 2>/dev/null || true;
+            $INPUT_BUILD_SCRIPT $INPUT_BUILD_ARGS
+          "
