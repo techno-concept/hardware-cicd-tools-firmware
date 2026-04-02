@@ -7,9 +7,9 @@ inputs:
     required: true
     default: "."
   docker-image:
-    description: "Name of the Docker image to build or use"
+    description: "Name of the Docker image to use (pre-built from GHCR)"
     required: false
-    default: "techno-concept-firmware-builder:latest"
+    default: "ghcr.io/techno-concept/firmware-builder:latest"
   build-script:
     description: "Build script to execute in the container"
     required: false
@@ -28,19 +28,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: "Set up Docker Buildx"
-      uses: docker/setup-buildx-action@v3
-
-    - name: "Build Docker Image"
-      uses: docker/build-push-action@v6
-      with:
-        context: ${{ github.action_path }}
-        file: ${{ github.action_path }}/Dockerfile
-        tags: ${{ inputs.docker-image }}
-        load: true
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
     - name: "Run Build in Docker"
       shell: bash
       env:
