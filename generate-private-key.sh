@@ -22,8 +22,14 @@ OPENSSL_BIN="${OPENSSL_BIN-openssl}"
 
 "$OPENSSL_BIN" genpkey \
     -algorithm EC \
-    -pkeyopt ec_paramgen_curve:P-256 \
-    -outform DER \
-    -out "$PRIVATE_KEY"
+    -pkeyopt ec_paramgen_curve:P-256 | \
+    "$OPENSSL_BIN" pkey \
+        -outform DER \
+        -out "$PRIVATE_KEY" && \
+    "$OPENSSL_BIN" pkcs8 \
+        -inform DER \
+        -in private_key.der \
+        -nocrypt \
+        -out /dev/null
 
 echo "Private key generated: $PRIVATE_KEY."
