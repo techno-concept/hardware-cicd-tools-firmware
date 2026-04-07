@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# create-github-signer-role.sh
+# create_or_update_github_signer.sh
 # =============================================================================
 # Configure AWS policy & IAM role to sign firmware via KMS.
 #
@@ -30,8 +30,7 @@ IAM_POLICY_NAME="AllowBruxlessKmsSign"
 # List of trusted GitHub respositories formatted as:
 # repo:OrgName/RepoName:ref:refs/heads/BranchName
 GITHUB_REPOS=(
-  "repo:TechnoConcept/cross-technoconcept-bruxless-qa:ref:refs/heads/main"
-  "repo:TechnoConcept/hardware-cicd-tools-firmware:ref:refs/heads/main"
+  "repo:techno-concept/bruxless-headset-firmware:*"
 )
 
 # List of developer IAM ARNs that are allowed to assume this role for local signing
@@ -85,8 +84,16 @@ POLICY_DOC=$(cat <<EOF
 EOF
 )
 
-# Attempt to create or update policy
-if aws iam get-policy --policy-arn "$POLICY_ARN" >/dev/null 2>&1; then
+# Attempt to create policy, handle EntityAlreadyExists by creating a new version
+echo "[...] Attempting to create policy..."
+CREATE_OUTPUT=$(aws iam create-policy \
+    --policy-name "$IAM_POLICY_NAME" \
+    --description "Allow firmware signing via KMS" \
+    --policy-document "$POLICY_DOC" \
+    --query "Policy.Arn" \
+    --output text 2>&1 || true)
+
+if echo "$CREATE_OUTPUT" | grep -q "EntityAlreadyExists"; then
     echo "[...] Policy exists. Updating default version..."
     aws iam create-policy-version \
         --policy-arn "$POLICY_ARN" \
@@ -96,16 +103,13 @@ if aws iam get-policy --policy-arn "$POLICY_ARN" >/dev/null 2>&1; then
             echo "    Please cleanup old versions via AWS Console, or ignore if unchanged."
         }
     echo "[OK] Policy updated: $POLICY_ARN"
-else
-    echo "[...] Creating policy..."
-    CREATE_OUTPUT=$(aws iam create-policy \
-        --policy-name "$IAM_POLICY_NAME" \
-        --description "Allow firmware signing via KMS" \
-        --policy-document "$POLICY_DOC" \
-        --query "Policy.Arn" \
-        --output text)
+elif echo "$CREATE_OUTPUT" | grep -q "arn:aws:iam::"; then
     POLICY_ARN="$CREATE_OUTPUT"
     echo "[OK] Policy created: $POLICY_ARN"
+else
+    echo "[!] Unexpected error when creating policy:"
+    echo "    $CREATE_OUTPUT"
+    exit 1
 fi
 
 echo ""
@@ -129,7 +133,7 @@ fi
 GH_REPOS_JSON=$(printf '%s\n' "${GITHUB_REPOS[@]}" | jq -R . | jq -s .)
 
 # Convert Dev ARNs to JSON Array string. We always include the admin to avoid empty arrays which AWS rejects.
-DEV_ARNS_JSON=$(printf '%s\n' "${DEVELOPER_ARNS[@]}" "$ADMIN_ARN" | sort -u | jq -R . | jq -s .)
+#DEV_ARNS_JSON=$(printf '%s\n' "${DEVELOPER_ARNS[@]}" "$ADMIN_ARN" | sort -u | jq -R . | jq -s .)
 
 TRUST_POLICY=$(cat <<EOF
 {
@@ -148,17 +152,17 @@ TRUST_POLICY=$(cat <<EOF
                     "token.actions.githubusercontent.com:sub": $GH_REPOS_JSON
                 }
             }
-        },
-        {
-            "Sid": "AdminLocalAssume",
-            "Effect": "Allow",
-            "Principal": { "AWS": $DEV_ARNS_JSON },
-            "Action": "sts:AssumeRole"
         }
     ]
 }
 EOF
 )
+        #{
+        #    "Sid": "AdminLocalAssume",
+        #    "Effect": "Allow",
+        #    "Principal": { "AWS": $DEV_ARNS_JSON },
+        #    "Action": "sts:AssumeRole"
+        #}
 
 ROLE_ARN=$(aws iam get-role --role-name "$ROLE_NAME" --query "Role.Arn" --output text 2>/dev/null || true)
 
