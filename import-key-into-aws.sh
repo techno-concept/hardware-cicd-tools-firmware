@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ─────────────────────────────────────────────────────────────────
+# CONFIGURATION - EDIT BEFORE RUNNING
+# ─────────────────────────────────────────────────────────────────
 PROFILE="${AWS_PROFILE:-bruxless-admin}"
 REGION="${AWS_REGION:-eu-west-3}"
-KEY_DER="${1:-private_key.der}"
+KEY_DER="private_key.der"
+
+# NOTE: This alias must be exactly the same as the one configured in create-github-signer-role.sh
+KMS_ALIAS="alias/sec/firmware-signer"
+# ─────────────────────────────────────────────────────────────────
 
 if [ ! -f "$KEY_DER" ]; then
   echo "[!] Missing private key: $KEY_DER" >&2
@@ -70,3 +77,16 @@ aws kms import-key-material \
 
 echo "Imported key into KMS:"
 echo "Imported key: $KEY_ID"
+
+if [ -n "$KMS_ALIAS" ]; then
+  # Check if alias already exists to update it, or create a new one
+  ALIAS_EXISTS=$(aws kms list-aliases --profile "$PROFILE" --region "$REGION" --query "Aliases[?AliasName=='${KMS_ALIAS}'].AliasName" --output text)
+  if [ -n "$ALIAS_EXISTS" ] && [ "$ALIAS_EXISTS" != "None" ]; then
+    echo "Updating existing alias $KMS_ALIAS to point to $KEY_ID..."
+    aws kms update-alias --profile "$PROFILE" --region "$REGION" --alias-name "$KMS_ALIAS" --target-key-id "$KEY_ID"
+  else
+    echo "Creating alias $KMS_ALIAS for $KEY_ID..."
+    aws kms create-alias --profile "$PROFILE" --region "$REGION" --alias-name "$KMS_ALIAS" --target-key-id "$KEY_ID"
+  fi
+  echo "Alias ready: $KMS_ALIAS"
+fi

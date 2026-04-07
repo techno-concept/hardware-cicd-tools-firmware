@@ -2,12 +2,11 @@
 
 set -euo pipefail
 
-PRIVATE_KEY="${1:-private_key.der}"
-
-if [ -z "${1:-}" ]; then
-    echo "[i] No output file specified. Using default: $PRIVATE_KEY"
-    echo "[i] Tip: you can pass a filename as the first argument"
-fi
+# ─────────────────────────────────────────────────────────────────
+# CONFIGURATION - EDIT BEFORE RUNNING
+# ─────────────────────────────────────────────────────────────────
+PRIVATE_KEY="private_key.der"
+# ─────────────────────────────────────────────────────────────────
 
 if [ -e "$PRIVATE_KEY" ]; then
     echo "Refusing to overwrite existing file: $PRIVATE_KEY." >&2
