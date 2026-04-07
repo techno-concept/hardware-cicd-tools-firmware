@@ -18,7 +18,9 @@ umask 077
 
 echo "Generating ECDSA (SECP256R1) private key in DER format..."
 
-openssl genpkey \
+OPENSSL_BIN="${OPENSSL_BIN-openssl}"
+
+"$OPENSSL_BIN" genpkey \
     -algorithm EC \
     -pkeyopt ec_paramgen_curve:P-256 \
     -outform DER \
