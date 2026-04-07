@@ -37,7 +37,7 @@ aws kms get-parameters-for-import \
 jq -r '.PublicKey' "$TMPDIR/import.json" | base64 --decode > "$TMPDIR/wrapping_key.der"
 jq -r '.ImportToken' "$TMPDIR/import.json" | base64 --decode > "$TMPDIR/import_token.bin"
 
-OPENSSL_BIN="openssl"
+OPENSSL_BIN="${OPENSSL_BIN-openssl}"
 
 # convert wrapping public key DER -> PEM (better portability)
 "$OPENSSL_BIN" pkey \
