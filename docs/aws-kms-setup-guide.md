@@ -49,7 +49,7 @@ Exécutez le script d'import avec un profil AWS disposant des droits administrat
 - Chiffre votre `private_key.der` en transit.
 - L'injecte sécuritairement, puis crée un alias pour cette clé.
 
-➡️  Si vous souhaitez modifier le nom des fichiers ou l'alias, vous pouvez **éditer la section CONFIGURATION** au début du fichier `import-key-into-aws.sh`. **Attention**, l'alias choisi devra être rigoureusement le même dans `create-github-signer-role.sh`.
+➡️  Si vous souhaitez modifier le nom des fichiers ou l'alias, vous pouvez **éditer la section CONFIGURATION** au début du fichier `import-key-into-aws.sh`. **Attention**, l'alias choisi devra être rigoureusement le même dans `create-or-update-github-signer.sh`.
 
 ```bash
 export AWS_PROFILE=bruxless-admin
@@ -60,16 +60,16 @@ export AWS_REGION=eu-west-3
 
 ## Étape 3 : Créer les permissions et le rôle GitHub
 
-Le script `create-github-signer-role.sh` va automatiser la création du fournisseur OIDC GitHub, de la politique de sécurité liant l'alias KMS créé ci-dessus, et du rôle `githubSigner`.
+Le script `create-or-update-github-signer.sh` va automatiser la création du fournisseur OIDC GitHub, de la politique de sécurité liant l'alias KMS créé ci-dessus, et du rôle `githubSigner`.
 
-1. **Ouvrez `create-github-signer-role.sh`** dans votre éditeur de texte.
+1. **Ouvrez `create-or-update-github-signer.sh`** dans votre éditeur de texte.
 2. Modifiez la section **CONFIGURATION** en haut du fichier :
    - Ajoutez ou supprimez des dépôts GitHub autorisés dans le tableau `GITHUB_REPOS`.
    - Ajoutez les ARN des comptes développeurs dans le tableau `DEVELOPER_ARNS`.
 3. **Exécutez le script** :
 
 ```bash
-./create-github-signer-role.sh
+./create-or-update-github-signer.sh
 ```
 
 ## Étape 4 : Ajouter un Développeur à postériori

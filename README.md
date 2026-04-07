@@ -14,7 +14,7 @@ To comply with our latest security guidelines, firmware binaries must be cryptog
 
 - [`generate-private-key.sh`](generate-private-key.sh): Generates an ECC P-256 private key and its corresponding public key.
 - [`import-key-into-aws.sh`](import-key-into-aws.sh): Safely imports the generated private key into AWS KMS and creates an easily referenceable Alias.
-- [`create-github-signer-role.sh`](create-github-signer-role.sh): Creates or updates the IAM Polices and dual Trust Policy Role (`githubSigner`) so that GitHub Actions and local developers can trigger a KMS signature.
+- [`create_or_update_github_signer.sh`](create-or-update-github-signer.sh): Creates or updates the IAM Polices and dual Trust Policy Role (`githubSigner`) so that GitHub Actions and local developers can trigger a KMS signature.
 
 ---
 

@@ -8,7 +8,7 @@ PROFILE="${AWS_PROFILE:-bruxless-admin}"
 REGION="${AWS_REGION:-eu-west-3}"
 KEY_DER="private_key.der"
 
-# NOTE: This alias must be exactly the same as the one configured in create-github-signer-role.sh
+# NOTE: This alias must be exactly the same as the one configured in create-or-update-github-signer.sh
 KMS_ALIAS="alias/sec/firmware-signer"
 # ─────────────────────────────────────────────────────────────────
 
