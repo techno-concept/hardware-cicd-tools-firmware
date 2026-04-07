@@ -1,10 +1,26 @@
 # hardware-cicd-tools-firmware
 
-This project provides composite actions for the [@techno-concept](https://github.com/techno-concept) organization.
+This repository provides tooling, scripts, and Actions for managing firmware builds, releases, and security (Firmware Signing) across the [@techno-concept](https://github.com/techno-concept) organization.
+
+## Firmware Securisation & Signing (AWS KMS)
+
+To comply with our latest security guidelines, firmware binaries must be cryptographically signed using an ECC P-256 key stored securely inside AWS KMS.
+
+*   **[Administrator Documentation](docs/aws-kms-setup-guide.md)**: Guide to generating a private key locally, importing it into an AWS KMS Hardware Security Module, and configuring the CI/CD policies.
+
+*   **[Developer Documentation](docs/aws-kms-developer-guide.md)**: Instructions for developers on how to configure their local AWS credentials to test and sign firmware locally with maximum safety.
+
+### Core Scripts
+
+- [`generate-private-key.sh`](generate-private-key.sh): Generates an ECC P-256 private key and its corresponding public key.
+- [`import-key-into-aws.sh`](import-key-into-aws.sh): Safely imports the generated private key into AWS KMS and creates an easily referenceable Alias.
+- [`create-github-signer-role.sh`](create-github-signer-role.sh): Creates or updates the IAM Polices and dual Trust Policy Role (`githubSigner`) so that GitHub Actions and local developers can trigger a KMS signature.
+
+---
 
 ## Composite actions
 
-This project provides the following composite actions:
+This project also provides the following composite actions:
 
 - [`techno-concept/hardware-cicd-tools-firmware/actions/github/release/create`](#github-release-create)
 
