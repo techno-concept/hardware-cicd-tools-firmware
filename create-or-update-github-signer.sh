@@ -33,11 +33,7 @@ GITHUB_REPOS=(
   "repo:techno-concept/bruxless-headset-firmware:*"
 )
 
-# List of developer IAM ARNs that are allowed to assume this role for local signing
-# Format: "arn:aws:iam::123456789012:user/firstname.lastname"
-DEVELOPER_ARNS=(
-  # "arn:aws:iam::123456789012:user/thierry"
-)
+
 
 echo "═══════════════════════════════════════════════════════════════"
 echo "  create-github-signer-role.sh"
@@ -132,9 +128,6 @@ fi
 # Convert GitHub Repos to JSON Array string
 GH_REPOS_JSON=$(printf '%s\n' "${GITHUB_REPOS[@]}" | jq -R . | jq -s .)
 
-# Convert Dev ARNs to JSON Array string. We always include the admin to avoid empty arrays which AWS rejects.
-#DEV_ARNS_JSON=$(printf '%s\n' "${DEVELOPER_ARNS[@]}" "$ADMIN_ARN" | sort -u | jq -R . | jq -s .)
-
 TRUST_POLICY=$(cat <<EOF
 {
     "Version": "2012-10-17",
@@ -152,17 +145,17 @@ TRUST_POLICY=$(cat <<EOF
                     "token.actions.githubusercontent.com:sub": $GH_REPOS_JSON
                 }
             }
+        },
+        {
+            "Sid": "DelegationCompteAWS",
+            "Effect": "Allow",
+            "Principal": { "AWS": "arn:aws:iam::${ACCOUNT_ID}:root" },
+            "Action": "sts:AssumeRole"
         }
     ]
 }
 EOF
 )
-        #{
-        #    "Sid": "AdminLocalAssume",
-        #    "Effect": "Allow",
-        #    "Principal": { "AWS": $DEV_ARNS_JSON },
-        #    "Action": "sts:AssumeRole"
-        #}
 
 ROLE_ARN=$(aws iam get-role --role-name "$ROLE_NAME" --query "Role.Arn" --output text 2>/dev/null || true)
 
@@ -187,3 +180,23 @@ echo "[OK] Policy $IAM_POLICY_NAME attached to Role $ROLE_NAME"
 
 echo ""
 echo "✅ Role ready. Role ARN: $ROLE_ARN"
+
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "  COMMENT AUTORISER UN DÉVELOPPEUR EN LOCAL ?"
+echo "═══════════════════════════════════════════════════════════════"
+echo "Il faut qu'un admin AWS (via web console ou cli) ajoute"
+echo "cette policy IAM (Rights/Droits IAM) sur l'utilisateur du développeur :"
+echo ""
+echo "{"
+echo "    \"Version\": \"2012-10-17\","
+echo "    \"Statement\": ["
+echo "        {"
+echo "            \"Sid\": \"AllowAssumeGithubSignerRole\","
+echo "            \"Effect\": \"Allow\","
+echo "            \"Action\": \"sts:AssumeRole\","
+echo "            \"Resource\": \"arn:aws:iam::\${ACCOUNT_ID}:role/githubSigner\""
+echo "        }"
+echo "    ]"
+echo "}"
+echo "═══════════════════════════════════════════════════════════════"
