@@ -35,7 +35,16 @@ CALLER_ARN=$(echo "$CALLER_IDENTITY" | jq -r '.Arn')
 echo "[OK] Account ID: $ACCOUNT_ID"
 echo "[OK] Caller ARN: $CALLER_ARN"
 
-# Create the Key Policy (KMS Key Policy, not an IAM Trust Policy)
+echo "[...] Resolving current key for alias $KMS_ALIAS..."
+OLD_KEY_ID=$(aws kms list-aliases --profile "$PROFILE" --region "$REGION" --query "Aliases[?AliasName=='$KMS_ALIAS'].TargetKeyId" --output text)
+
+if [ -n "$OLD_KEY_ID" ] && [ "$OLD_KEY_ID" != "None" ]; then
+  echo "[INFO] Existing key detected: $OLD_KEY_ID"
+else
+  echo "[INFO] No existing key found for alias $KMS_ALIAS"
+  OLD_KEY_ID=""
+fi
+
 KEY_POLICY_FILE="$TMPDIR/key-policy.json"
 cat > "$KEY_POLICY_FILE" <<EOF
 {
@@ -155,4 +164,20 @@ if [ -n "$KMS_ALIAS" ]; then
     aws kms create-alias --profile "$PROFILE" --region "$REGION" --alias-name "$KMS_ALIAS" --target-key-id "$KEY_ID"
   fi
   echo "Alias ready: $KMS_ALIAS"
+fi
+
+if [ -n "$OLD_KEY_ID" ] && [ "$OLD_KEY_ID" != "$KEY_ID" ]; then
+  echo ""
+  echo "─────────────────────────────────────────────────────────────────"
+  echo "  CLEANUP HINT"
+  echo "─────────────────────────────────────────────────────────────────"
+  echo "The old key $OLD_KEY_ID is now ORPHANED."
+  echo "To schedule its deletion in 7 days, run the following command:"
+  echo ""
+  echo "  aws kms schedule-key-deletion \\"
+  echo "    --profile $PROFILE \\"
+  echo "    --region $REGION \\"
+  echo "    --key-id $OLD_KEY_ID \\"
+  echo "    --pending-window-in-days 7"
+  echo "─────────────────────────────────────────────────────────────────"
 fi
