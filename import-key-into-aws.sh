@@ -13,7 +13,6 @@ KMS_ALIAS="alias/sec/firmware-signer"
 
 # Names for the policy principals
 ROLE_NAME="githubSigner"
-KMS_ADMIN_USER="kms-provisioner-firmware-crossover"
 # ─────────────────────────────────────────────────────────────────
 
 if [ ! -f "$KEY_DER" ]; then
@@ -24,9 +23,13 @@ fi
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
-echo "[...] Fetching AWS Account ID..."
-ACCOUNT_ID=$(aws sts get-caller-identity --profile "$PROFILE" --region "$REGION" --query "Account" --output text)
+echo "[...] Fetching AWS Caller Identity..."
+CALLER_IDENTITY=$(aws sts get-caller-identity --profile "$PROFILE" --region "$REGION" --output json)
+ACCOUNT_ID=$(echo "$CALLER_IDENTITY" | jq -r '.Account')
+CALLER_ARN=$(echo "$CALLER_IDENTITY" | jq -r '.Arn')
+
 echo "[OK] Account ID: $ACCOUNT_ID"
+echo "[OK] Caller ARN: $CALLER_ARN"
 
 # Create the Key Policy (KMS Key Policy, not an IAM Trust Policy)
 KEY_POLICY_FILE="$TMPDIR/key-policy.json"
@@ -47,7 +50,7 @@ cat > "$KEY_POLICY_FILE" <<EOF
       "Sid": "AllowKeyAdmin",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::${ACCOUNT_ID}:user/${KMS_ADMIN_USER}"
+        "AWS": "$CALLER_ARN"
       },
       "Action": [
         "kms:PutKeyPolicy",
