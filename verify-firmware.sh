@@ -7,6 +7,13 @@
 
 set -euo pipefail
 
+# Dependencies check
+if ! command -v crc32 &> /dev/null; then
+    echo "Error: 'crc32' utility not found." >&2
+    echo "On macOS, it is usually pre-installed. On Linux, install 'libarchive-zip-perl'." >&2
+    exit 1
+fi
+
 usage() {
     echo "Usage: $0 --image <image.nvpfwimage> --public-key <public_key.pem>"
     echo ""
