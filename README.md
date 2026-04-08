@@ -24,6 +24,7 @@ To comply with our latest security guidelines, firmware binaries must be cryptog
 This project also provides the following composite actions:
 
 - [`techno-concept/hardware-cicd-tools-firmware/actions/github/release/create`](#github-release-create)
+- [`techno-concept/hardware-cicd-tools-firmware/actions/github/firmware/build-docker`](#github-firmware-build-docker)
 
 ### <a name="github-release-create"> `techno-concept/hardware-cicd-tools-firmware/actions/github/release/create`
 
@@ -70,3 +71,24 @@ For details, see [`actions/github/release/create/action.yml`](actions/github/rel
 #### Side Effects
 
 A release is created by the user who owns the GitHub token specified with the `github-token` input.
+
+---
+
+### <a name="github-firmware-build-docker"> `techno-concept/hardware-cicd-tools-firmware/actions/github/firmware/build-docker`
+
+This action builds a firmware using a Docker container.
+
+```yaml
+- name: "Build firmware"
+  uses: "techno-concept/hardware-cicd-tools-firmware/actions/github/firmware/build-docker@1.0.0"
+  with:
+    project-name: "my-project"
+```
+
+For details, see [`actions/github/firmware/build-docker/action.yml`](actions/github/firmware/build-docker/action.yml).
+
+#### Inputs
+
+- `project-name`, required: The name of the project to build.
+- `build-type`, optional: The type of build (Release, Debug). Defaults to `Release`.
+
