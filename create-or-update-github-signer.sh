@@ -33,8 +33,6 @@ GITHUB_REPOS=(
   "repo:techno-concept/bruxless-headset-firmware:*"
 )
 
-
-
 echo "═══════════════════════════════════════════════════════════════"
 echo "  create-github-signer-role.sh"
 echo "  AWS Profile: $AWS_PROFILE | Region: $REGION"
@@ -195,7 +193,7 @@ echo "        {"
 echo "            \"Sid\": \"AllowAssumeGithubSignerRole\","
 echo "            \"Effect\": \"Allow\","
 echo "            \"Action\": \"sts:AssumeRole\","
-echo "            \"Resource\": \"arn:aws:iam::\${ACCOUNT_ID}:role/githubSigner\""
+echo "            \"Resource\": \"arn:aws:iam::${ACCOUNT_ID}:role/githubSigner\""
 echo "        }"
 echo "    ]"
 echo "}"
