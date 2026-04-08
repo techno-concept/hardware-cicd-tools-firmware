@@ -12,9 +12,10 @@ To comply with our latest security guidelines, firmware binaries must be cryptog
 
 ### Core Scripts
 
-- [`generate-private-key.sh`](generate-private-key.sh): Generates an ECC P-256 private key and its corresponding public key.
+- [`generate-keys.sh`](generate-keys.sh): Generates an ECC P-256 private key and its corresponding public key.
 - [`import-key-into-aws.sh`](import-key-into-aws.sh): Safely imports the generated private key into AWS KMS and creates an easily referenceable Alias.
-- [`create_or_update_github_signer.sh`](create-or-update-github-signer.sh): Creates or updates the IAM Polices and dual Trust Policy Role (`githubSigner`) so that GitHub Actions and local developers can trigger a KMS signature.
+- [`create-or-update-kms-sign-policy.sh`](create-or-update-kms-sign-policy.sh): Creates or updates the IAM Policy for KMS signature.
+- [`create-or-update-github-signer-role.sh`](create-or-update-github-signer-role.sh): Creates or updates the dual Trust Policy Role (`githubSigner`) for GitHub Actions and local developers.
 
 ---
 
