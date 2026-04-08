@@ -28,6 +28,7 @@ KEY_ID="$(
     --origin EXTERNAL \
     --key-spec ECC_NIST_P256 \
     --key-usage SIGN_VERIFY \
+    --policy file://trust-policy.json \
     --query 'KeyMetadata.KeyId' \
     --output text
 )"
