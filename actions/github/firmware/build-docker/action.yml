@@ -19,12 +19,12 @@ inputs:
     required: false
     default: "--build-type release"
   github-token:
-    description: "GitHub token (éphémère via GitHub App) pour cloner les dépôts privés via FetchContent"
+    description: "GitHub token (ephemeral via GitHub App) used to clone private repositories via FetchContent"
     required: true
-  aws-kms-key-id:
-    description: "ARN ou alias de la clé AWS KMS utilisée pour signer le firmware (optionnel)"
-    required: false
 
+  aws-kms-key-id:
+    description: "ARN or alias of the AWS KMS key used to sign the firmware (optional)"
+    required: false
 runs:
   using: "composite"
   steps:
