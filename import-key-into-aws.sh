@@ -15,6 +15,10 @@ KMS_ALIAS="alias/sec/firmware-signer"
 ROLE_NAME="githubSigner"
 # ─────────────────────────────────────────────────────────────────
 
+# Replaces the active firmware signing key by creating a new KMS key,
+# importing the provided key material, and repointing the alias.
+# Old keys are left in AWS KMS and may need manual cleanup afterwards.
+
 if [ ! -f "$KEY_DER" ]; then
   echo "[!] Missing private key: $KEY_DER" >&2
   exit 1
