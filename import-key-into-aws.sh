@@ -10,6 +10,10 @@ KEY_DER="private_key.der"
 
 # NOTE: This alias must be exactly the same as the one configured in create-or-update-github-signer.sh
 KMS_ALIAS="alias/sec/firmware-signer"
+
+# Names for the policy principals
+ROLE_NAME="githubSigner"
+KMS_ADMIN_USER="kms-provisioner-firmware-crossover"
 # ─────────────────────────────────────────────────────────────────
 
 if [ ! -f "$KEY_DER" ]; then
@@ -20,6 +24,60 @@ fi
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
+echo "[...] Fetching AWS Account ID..."
+ACCOUNT_ID=$(aws sts get-caller-identity --profile "$PROFILE" --region "$REGION" --query "Account" --output text)
+echo "[OK] Account ID: $ACCOUNT_ID"
+
+# Create the Key Policy (KMS Key Policy, not an IAM Trust Policy)
+KEY_POLICY_FILE="$TMPDIR/key-policy.json"
+cat > "$KEY_POLICY_FILE" <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EnableRootPermissions",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::${ACCOUNT_ID}:root"
+      },
+      "Action": "kms:*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowKeyAdmin",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::${ACCOUNT_ID}:user/${KMS_ADMIN_USER}"
+      },
+      "Action": [
+        "kms:PutKeyPolicy",
+        "kms:UpdateKeyDescription",
+        "kms:EnableKey",
+        "kms:DisableKey",
+        "kms:ScheduleKeyDeletion",
+        "kms:CancelKeyDeletion",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowGitHubSignerUseKey",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_NAME}"
+      },
+      "Action": [
+        "kms:Sign",
+        "kms:GetPublicKey",
+        "kms:DescribeKey"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+
+echo "[...] Creating KMS key with dynamic policy..."
 # create empty key
 KEY_ID="$(
   aws kms create-key \
@@ -28,7 +86,7 @@ KEY_ID="$(
     --origin EXTERNAL \
     --key-spec ECC_NIST_P256 \
     --key-usage SIGN_VERIFY \
-    --policy file://trust-policy.json \
+    --policy "file://$KEY_POLICY_FILE" \
     --query 'KeyMetadata.KeyId' \
     --output text
 )"
