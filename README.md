@@ -2,6 +2,10 @@
 
 This repository provides tooling, scripts, and Actions for managing firmware builds, releases, and security (Firmware Signing) across the [@techno-concept](https://github.com/techno-concept) organization.
 
+## Prerequisites
+
+To use the scripts in this repository, you must have the following tools installed: **AWS CLI** (configured with appropriate credentials), **jq** (for JSON parsing), and **OpenSSL** (for key management). The firmware verification script also requires the `crc32` utility.
+
 ## Firmware Securisation & Signing (AWS KMS)
 
 To comply with our latest security guidelines, firmware binaries must be cryptographically signed using an ECC P-256 key stored securely inside AWS KMS.
