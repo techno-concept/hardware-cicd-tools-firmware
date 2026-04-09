@@ -1,10 +1,10 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # Prevent interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
+# PEP 668: allow pip in system Python (acceptable here: build-only image)
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
-# Install CMake >= 3.25 from Kitware official repository (apt provides only 3.22 on Ubuntu 22.04)
-# Update system and install required build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     gcc-arm-none-eabi \
@@ -19,10 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gpg \
     zip \
-    && curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg \
-    && echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ jammy main' > /etc/apt/sources.list.d/kitware.list \
-    && apt-get update && apt-get install -y --no-install-recommends \
-        cmake \
+    cmake \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies (cryptography for ECDSA signing, boto3 for AWS KMS)
