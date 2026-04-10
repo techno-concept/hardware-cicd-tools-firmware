@@ -2,9 +2,21 @@
 
 Ce document explique comment un développeur autorisé peut signer un firmware localement sur sa machine, en utilisant la délégation de rôle AWS (`githubSigner`), tout en garantissant qu'aucune clé privée ne se trouve sur son disque dur.
 
-## Pré-requis : Configuration des Credentials AWS
+## Pré-requis : Installation d'aws cli et Configuration des Credentials AWS
 
-1. **Vos clés d'accès permanentes**  
+1. Installation d'aws cli sur Ubuntu / Debian
+
+Suivre les instructions d'installation d'aws cli : https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+
+```bash
+# Debian / Ubuntu
+$ curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+```
+
+2. **Vos clés d'accès permanentes**  
    L'administrateur AWS doit vous fournir une clé d'accès (Access Key ID et Secret Access Key). Ces identifiants prouvent votre identité mais n'ont *pas* le droit direct de signer.  
    Configurez ces identifiants dans votre fichier `~/.aws/credentials` :
 
@@ -16,14 +28,29 @@ Ce document explique comment un développeur autorisé peut signer un firmware l
    aws_access_key_id = AKIAIOSFODNN7EXAMPLE
    aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
    
-   # Option B : Profil dédié nommé (ex: bruxless-dev)
+   # Option B : Profil dédié nommé (ex: bruxless-dev) 
    [bruxless-dev]
    aws_access_key_id = AKIAIOSFODNN7EXAMPLE
    aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
    ```
 
-2. **Délégation accordée par l'Admin**  
+   Dans la suite du document, nous utiliserons le profil `default`.
+
+3. **Délégation accordée par l'Admin**  
    L'administrateur Cloud doit vous avoir explicitement autorisé (via une policy IAM sur votre compte AWS) à assumer le rôle `githubSigner`.
+
+4. Check aws connection en tant que développeur
+
+```bash
+
+$ aws sts get-caller-identity
+{
+    "UserId": "AIDAYZZGTFXY36K7NFXDH",
+    "Account": "605134466545",
+    "Arn": "arn:aws:iam::605134466545:user/bruxless-dev"
+}
+
+```
 
 ## Configuration Initiale du Profil Signer (AssumeRole)
 
@@ -42,6 +69,30 @@ region = eu-west-3
 
 - **`role_arn`** : Remplacez `VOTRE_AWS_ACCOUNT_ID_12_CHIFFRES` par le numéro de compte AWS de l'entreprise (ex: 123456789012).
 - **`source_profile`** : Mettez ici le nom du profil utilisé dans `~/.aws/credentials` (ex: `default` ou `bruxless-dev`).
+
+Pour Technoconcept, le numéro de compte AWS est : 605134466545 donc :
+
+```ini
+# Fichier : ~/.aws/config
+
+[profile bruxless-signer]
+role_arn = arn:aws:iam::605134466545:role/githubSigner
+source_profile = default
+region = eu-west-3
+```
+
+Check aws connection en tant que développeur avec le profil bruxless-signer
+
+```bash
+
+$ aws sts get-caller-identity --profile bruxless-signer
+{
+    "UserId": "AROAYZZGTFXYSQ5RXWWQV:botocore-session-1775808735",
+    "Account": "605134466545",
+    "Arn": "arn:aws:sts::605134466545:assumed-role/githubSigner/botocore-session-1775808735"
+}
+
+```
 
 ## Signature du Firmware au quotidien
 
@@ -75,6 +126,7 @@ sequenceDiagram
 ```
 
 **Légende :**
+
 1. Le SDK (ou le script CLI) intercepte le `profile bruxless-signer` et demande automatiquement à AWS STS d'emprunter temporairement le rôle `githubSigner` via vos identifiants configurés.
 2. AWS STS retourne un accès temporaire (limité à 1 heure).
 3. Vous lancez le script de signature python en ligne de commande.
@@ -106,3 +158,53 @@ python3 ./sign_firmware_aws.py \
 ```
 
 L'unique moyen d'obtenir une signature valide au format convenu (pour le Bootloader) et donc avec ces identifiants cryptographiques sécurisés, est de passer par votre identité AWS. La compromission du PC d'un développeur ne peut en aucun cas faire fuir la clé "maître".
+
+### Modification effectuées dans le dépot github
+
+Dans le fichier `build.sh` ajout des 2 variables d'environnement :
+
+```bash
+# Set default AWS KMS signing variables if not provided by the environment (e.g. CI)
+export AWS_PROFILE="${AWS_PROFILE:-bruxless-signer}"
+export AWS_KMS_KEY_ID="${AWS_KMS_KEY_ID:-alias/sec/firmware-signer}"
+
+```
+
+- Ajout des fichiers :
+  - `python/sign_firmware_aws_kms.py`
+  - `python/publickey_ecdsa_aws.pem`
+  - `python/verify_firmware_signature.py
+
+- Modification du fichier `CMakeLists.txt`:
+
+```cmake
+
+    if(DEFINED ENV{AWS_KMS_KEY_ID})
+        message(STATUS "Signing withAWS KMS Cloud Key.")
+        list(APPEND _artifact_commands
+            COMMAND ${PYTHON_SIGNING_INTERPRETER} ${CMAKE_CURRENT_LIST_DIR}/python/sign_firmware_aws_kms.py
+                    --key-id "$ENV{AWS_KMS_KEY_ID}"
+                    --firmware ${_bin_file}
+                    --output ${_der_file}
+        )
+
+        list(APPEND _artifact_commands
+            COMMAND ${PYTHON_SIGNING_INTERPRETER} ${CMAKE_CURRENT_LIST_DIR}/python/generate_nvpfwimage.py
+                    ${_bin_file}
+                    --unsigned-output ${_nvpfwimage_file}
+                    --signed-output ${_nvpfwimage_file_signed}
+                    --signature ${_der_file}
+
+            COMMAND ${PYTHON_SIGNING_INTERPRETER} ${CMAKE_CURRENT_LIST_DIR}/python/verify_firmware_signature.py
+                    --image ${_nvpfwimage_file_signed}
+                    --public-key "${AWS_ECDSA_PUBLIC_KEY}"
+                    
+            COMMAND ${PYTHON_SIGNING_INTERPRETER} ${VISUALIZE_HEX_SCRIPT} ${_hex_file} --no-show
+            COMMAND ${OBJSIZE} ${target_name}
+        )
+
+        add_custom_command(TARGET ${target_name} POST_BUILD
+                ${_artifact_commands}
+                COMMENT "Building ${_elf_file}, ${_hex_file}, ${_bin_file}, ${_map_file}, ${_nvpfwimage_file}, ${_nvpfwimage_file_signed}, and ECDSA signature")
+    endif()
+```
