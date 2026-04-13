@@ -4,7 +4,7 @@ This repository provides tooling, scripts, and Actions for managing firmware bui
 
 ## Prerequisites
 
-To use the scripts in this repository, you must have the following tools installed: **AWS CLI** (configured with appropriate credentials), **jq** (for JSON parsing), and **OpenSSL** (for key management). The firmware verification script also requires the `crc32` utility.
+To use the scripts in this repository, you must have the following tools installed: **AWS CLI** (configured with appropriate credentials), **jq** (for JSON parsing), **OpenSSL** (for key management), and **uv** (for python dependencies management). The firmware verification script also requires the `crc32` utility.
 
 ## Firmware Securisation & Signing (AWS KMS)
 
