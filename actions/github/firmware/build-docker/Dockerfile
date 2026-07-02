@@ -14,6 +14,7 @@ ENV UV_LINK_MODE=copy \
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    g++ \
     gcc-arm-none-eabi \
     libnewlib-arm-none-eabi \
     libstdc++-arm-none-eabi-newlib \
